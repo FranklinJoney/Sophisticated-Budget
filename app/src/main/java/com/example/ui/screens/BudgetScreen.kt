@@ -307,8 +307,9 @@ fun LedgerItemRow(
     viewModel: BudgetViewModel,
     onDelete: () -> Unit
 ) {
-    val meta = remember(transaction.category) {
-        CategoryHelpers.getMeta(transaction.category)
+    val categoryMetas by viewModel.categoryMetas.collectAsState()
+    val meta = remember(transaction.category, categoryMetas) {
+        viewModel.getCategoryMeta(transaction.category)
     }
 
     val dateStr = remember(transaction.dateMillis) {

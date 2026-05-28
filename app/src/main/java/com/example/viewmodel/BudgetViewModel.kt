@@ -7,6 +7,8 @@ import com.example.data.AppDatabase
 import com.example.data.BudgetRepository
 import com.example.data.MonthlyBudget
 import com.example.data.Transaction
+import com.example.ui.components.CategoryHelpers
+import com.example.ui.components.CategoryMeta
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -51,6 +53,12 @@ class BudgetViewModel(application: Application) : AndroidViewModel(application) 
             // Deletes elements
             allTransactions.value.forEach { repository.deleteTransaction(it) }
             allBudgets.value.forEach { /* delete budget or override */ }
+            
+            // Delete custom categories and rewrite defaults
+            val existingCats = repository.allCategories.first()
+            existingCats.forEach { repository.deleteCategoryById(it.id) }
+            repository.insertCategories(CategoryHelpers.DEFAULT_CATEGORIES)
+
             val current = _selectedMonth.value
             seedDefaultData(current)
         }
@@ -70,6 +78,11 @@ class BudgetViewModel(application: Application) : AndroidViewModel(application) 
 
         // Seed initial data if database is empty
         viewModelScope.launch {
+            repository.allCategories.first().let { list ->
+                if (list.isEmpty()) {
+                    repository.insertCategories(CategoryHelpers.DEFAULT_CATEGORIES)
+                }
+            }
             repository.allTransactions.first().let { list ->
                 if (list.isEmpty()) {
                     seedDefaultData(initialMonth)
@@ -86,12 +99,70 @@ class BudgetViewModel(application: Application) : AndroidViewModel(application) 
     val allBudgets: StateFlow<List<MonthlyBudget>> = repository.allMonthlyBudgets
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    // Expose all categories from database
+    val allCategories: StateFlow<List<com.example.data.Category>> = repository.allCategories
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Convert to dynamic list of category UI metas
+    val categoryMetas: StateFlow<List<CategoryMeta>> = allCategories
+        .map { list ->
+            if (list.isEmpty()) {
+                CategoryHelpers.DEFAULT_METAS
+            } else {
+                list.map { CategoryHelpers.fromDb(it) }
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), CategoryHelpers.DEFAULT_METAS)
+
+    fun getCategoryMeta(categoryName: String): CategoryMeta {
+        return CategoryHelpers.getMeta(categoryName, categoryMetas.value)
+    }
+
+    fun addCategory(displayName: String, iconName: String, bgColorHex: String, iconColorHex: String) {
+        viewModelScope.launch {
+            val cleanId = displayName.trim()
+            if (cleanId.isNotBlank()) {
+                val category = com.example.data.Category(
+                    id = cleanId,
+                    displayName = cleanId,
+                    iconName = iconName,
+                    bgColorHex = bgColorHex,
+                    iconColorHex = iconColorHex
+                )
+                repository.insertCategory(category)
+            }
+        }
+    }
+
+    fun updateCategory(oldId: String, newDisplayName: String, iconName: String, bgColorHex: String, iconColorHex: String) {
+        viewModelScope.launch {
+            val cleanNewId = newDisplayName.trim()
+            if (cleanNewId.isNotBlank()) {
+                val updated = com.example.data.Category(
+                    id = cleanNewId,
+                    displayName = cleanNewId,
+                    iconName = iconName,
+                    bgColorHex = bgColorHex,
+                    iconColorHex = iconColorHex
+                )
+                repository.updateCategory(oldId, updated)
+            }
+        }
+    }
+
+    fun deleteCategory(categoryId: String) {
+        viewModelScope.launch {
+            repository.deleteCategoryById(categoryId)
+        }
+    }
+
     // Computed budget info for selected month
     val currentMonthBudgetState: StateFlow<MonthBudgetSummary> = combine(
         allTransactions,
         allBudgets,
+        categoryMetas,
         _selectedMonth
-    ) { transactions, budgets, month ->
+    ) { transactions, budgets, _, month ->
         calculateSummary(transactions, budgets, month)
     }.stateIn(
         viewModelScope,

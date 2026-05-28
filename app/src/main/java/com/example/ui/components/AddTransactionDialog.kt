@@ -40,10 +40,14 @@ fun AddTransactionDialog(
 ) {
     val context = LocalContext.current
 
+    val categories by viewModel.categoryMetas.collectAsState()
+
     var title by remember { mutableStateOf("") }
     var amountStr by remember { mutableStateOf("") }
     var selectedType by remember { mutableStateOf("EXPENSE") } // "EXPENSE" or "INCOME"
-    var selectedCategory by remember { mutableStateOf(CategoryHelpers.CATEGORIES[0].id) }
+    var selectedCategory by remember(categories) {
+        mutableStateOf(if (categories.isNotEmpty()) categories[0].id else "Other")
+    }
     var notes by remember { mutableStateOf("") }
 
     // Date State
@@ -269,11 +273,11 @@ fun AddTransactionDialog(
                     columns = GridCells.Fixed(3),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(130.dp),
+                        .heightIn(max = 180.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(CategoryHelpers.CATEGORIES) { cat ->
+                    items(categories) { cat ->
                         val isSelected = cat.id == selectedCategory
                         val borderCol = if (isSelected) AccentPurple else Color.Transparent
                         val bgCol = if (isSelected) DarkBG else DarkCategory

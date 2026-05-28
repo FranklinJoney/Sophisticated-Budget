@@ -334,8 +334,9 @@ fun CategoryRowItem(
     report: com.example.viewmodel.CategoryReport,
     viewModel: BudgetViewModel
 ) {
-    val meta = remember(report.category) {
-        CategoryHelpers.getMeta(report.category)
+    val categoryMetas by viewModel.categoryMetas.collectAsState()
+    val meta = remember(report.category, categoryMetas) {
+        viewModel.getCategoryMeta(report.category)
     }
 
     Row(

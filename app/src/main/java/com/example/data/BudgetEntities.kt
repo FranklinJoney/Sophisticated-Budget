@@ -19,3 +19,13 @@ data class MonthlyBudget(
     @PrimaryKey val yearMonth: String, //Format: "YYYY-MM" (e.g. "2026-05")
     val budgetLimit: Double
 )
+
+@Entity(tableName = "categories")
+data class Category(
+    @PrimaryKey val id: String,
+    val displayName: String,
+    val iconName: String, // e.g., "Restaurant", "DirectionsCar" etc
+    val bgColorHex: String, // format: "#FFE8DEF8" or similar hex
+    val iconColorHex: String // format: "#FF21005D"
+)
+

@@ -299,7 +299,7 @@ fun RingChartVisualizer(
                 var startAngle = -90f
                 for (report in reports) {
                     val sweepAngle = ((report.totalSpent / totalExpense) * 360f).toFloat()
-                    val meta = CategoryHelpers.getMeta(report.category)
+                    val meta = viewModel.getCategoryMeta(report.category)
                     
                     drawArc(
                         color = meta.bgColor,
@@ -482,8 +482,9 @@ fun CategoryPercentItem(
     index: Int,
     viewModel: BudgetViewModel
 ) {
-    val meta = remember(report.category) {
-        CategoryHelpers.getMeta(report.category)
+    val categoryMetas by viewModel.categoryMetas.collectAsState()
+    val meta = remember(report.category, categoryMetas) {
+        viewModel.getCategoryMeta(report.category)
     }
 
     Row(

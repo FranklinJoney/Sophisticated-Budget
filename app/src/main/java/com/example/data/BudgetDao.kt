@@ -28,4 +28,26 @@ interface BudgetDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMonthlyBudget(budget: MonthlyBudget)
+
+    // Categories
+    @Query("SELECT * FROM categories")
+    fun getAllCategoriesFlow(): Flow<List<Category>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertCategory(category: Category)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertCategories(categories: List<Category>)
+
+    @Delete
+    suspend fun deleteCategory(category: Category)
+
+    @Query("DELETE FROM categories WHERE id = :id")
+    suspend fun deleteCategoryById(id: String)
+
+    @Query("UPDATE transactions SET category = :newCategory WHERE category = :oldCategory")
+    suspend fun updateTransactionsCategory(oldCategory: String, newCategory: String)
+
+    @Query("UPDATE transactions SET category = 'Other' WHERE category = :categoryName")
+    suspend fun updateTransactionsOfDeletedCategory(categoryName: String)
 }

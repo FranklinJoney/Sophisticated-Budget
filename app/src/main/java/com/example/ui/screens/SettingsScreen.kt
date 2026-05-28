@@ -6,6 +6,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -17,11 +20,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ui.components.CategoryHelpers
+import com.example.ui.components.CategoryMeta
 import com.example.ui.theme.*
 import com.example.viewmodel.BudgetViewModel
 
@@ -247,6 +253,113 @@ fun SettingsScreen(
                 }
             }
 
+            // Custom Categories list section & Dialogs
+            item {
+                var showCategoryDialog by remember { mutableStateOf(false) }
+                var editingCategory by remember { mutableStateOf<CategoryMeta?>(null) }
+                
+                val categories by viewModel.categoryMetas.collectAsState()
+
+                if (showCategoryDialog || editingCategory != null) {
+                    CategoryEditDialog(
+                        existingCategory = editingCategory,
+                        onDismiss = {
+                            showCategoryDialog = false
+                            editingCategory = null
+                        },
+                        onSave = { oldId, displayName, iconName, bgHex, textHex ->
+                            if (oldId != null) {
+                                viewModel.updateCategory(oldId, displayName, iconName, bgHex, textHex)
+                            } else {
+                                viewModel.addCategory(displayName, iconName, bgHex, textHex)
+                            }
+                            showCategoryDialog = false
+                            editingCategory = null
+                        },
+                        onDelete = { categoryId ->
+                            viewModel.deleteCategory(categoryId)
+                            showCategoryDialog = false
+                            editingCategory = null
+                        }
+                    )
+                }
+
+                SettingsGroup(title = "Custom Categories") {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text(
+                            text = "Add, edit, or customize display styles (icons & colors) for transaction categories:",
+                            color = TextSub,
+                            fontSize = 13.sp
+                        )
+
+                        val categoryChunks = categories.chunked(2)
+                        for (chunk in categoryChunks) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                for (cat in chunk) {
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(cat.bgColor)
+                                            .clickable { editingCategory = cat }
+                                            .padding(horizontal = 12.dp, vertical = 10.dp)
+                                            .testTag("manage_cat_${cat.id.replace(" ", "_")}"),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = cat.icon,
+                                                contentDescription = null,
+                                                tint = cat.iconColor,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                            Text(
+                                                text = cat.displayName,
+                                                color = cat.iconColor,
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                textAlign = TextAlign.Center
+                                            )
+                                            Icon(
+                                                imageVector = Icons.Default.Edit,
+                                                contentDescription = null,
+                                                tint = cat.iconColor.copy(alpha = 0.6f),
+                                                modifier = Modifier.size(12.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                                if (chunk.size < 2) {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Button(
+                            onClick = { showCategoryDialog = true },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = AccentPurple,
+                                contentColor = AccentPurpleOnContainer
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth().testTag("add_custom_category_btn")
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Create Custom Category", fontSize = 13.sp)
+                        }
+                    }
+                }
+            }
+
             // System administration setting triggers
             item {
                 SettingsGroup(title = "Core Administration") {
@@ -376,4 +489,236 @@ fun AdminRow(
             modifier = Modifier.size(20.dp)
         )
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CategoryEditDialog(
+    existingCategory: CategoryMeta?,
+    onDismiss: () -> Unit,
+    onSave: (oldId: String?, displayName: String, iconName: String, bgHex: String, textHex: String) -> Unit,
+    onDelete: (categoryId: String) -> Unit
+) {
+    var name by remember { mutableStateOf(existingCategory?.displayName ?: "") }
+    var selectedIconName by remember { mutableStateOf(
+        CategoryHelpers.ICONS.find { it.icon == existingCategory?.icon }?.id ?: "Category"
+    ) }
+    
+    var selectedColor by remember { mutableStateOf(
+        CategoryHelpers.COLORS.find { 
+            existingCategory != null && 
+            try { Color(android.graphics.Color.parseColor(it.bgHex)) == existingCategory.bgColor } catch (e: Exception) { false }
+        } ?: CategoryHelpers.COLORS[0]
+    ) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { 
+            Text(
+                if (existingCategory != null) "Edit Category" else "Add Custom Category", 
+                color = TextLight,
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp
+            ) 
+        },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                // Name field
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Category Name") },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = AccentPurple,
+                        unfocusedBorderColor = DarkBorder,
+                        focusedTextColor = TextLight,
+                        unfocusedTextColor = TextLight,
+                        focusedContainerColor = DarkCategory,
+                        unfocusedContainerColor = DarkCategory,
+                        focusedLabelColor = AccentPurple,
+                        unfocusedLabelColor = TextMuted
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth().testTag("cat_edit_name_input"),
+                    singleLine = true,
+                    placeholder = { Text("e.g., Subscriptions") }
+                )
+
+                // Visual live preview container
+                Text(
+                    text = "Live Preview:",
+                    color = TextMuted,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
+
+                val previewBg = try { Color(android.graphics.Color.parseColor(selectedColor.bgHex)) } catch (e: Exception) { CatOtherBg }
+                val previewText = try { Color(android.graphics.Color.parseColor(selectedColor.textHex)) } catch (e: Exception) { CatOtherOnBg }
+                val previewIcon = CategoryHelpers.getIconByName(selectedIconName)
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(previewBg)
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(previewText.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = previewIcon,
+                                contentDescription = null,
+                                tint = previewText,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Text(
+                            text = if (name.isNotBlank()) name else "Category Name",
+                            color = previewText,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                // Choose Icon Section
+                Text(
+                    text = "Choose Visual Icon:",
+                    color = TextMuted,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
+
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(5),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(110.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    items(CategoryHelpers.ICONS) { iconOpt ->
+                        val isSelected = iconOpt.id == selectedIconName
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (isSelected) AccentPurpleContainer else DarkCategory)
+                                .border(1.dp, if (isSelected) AccentPurple else DarkBorder, RoundedCornerShape(8.dp))
+                                .clickable { selectedIconName = iconOpt.id }
+                                .testTag("select_icon_${iconOpt.id}"),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = iconOpt.icon,
+                                contentDescription = iconOpt.label,
+                                tint = if (isSelected) AccentPurpleOnContainer else TextLight,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                }
+
+                // Choose Color Section
+                Text(
+                    text = "Choose Color Style:",
+                    color = TextMuted,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
+
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(4),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(85.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    items(CategoryHelpers.COLORS) { colOpt ->
+                        val isSelected = colOpt.name == selectedColor.name
+                        val bg = try { Color(android.graphics.Color.parseColor(colOpt.bgHex)) } catch (e: Exception) { CatOtherBg }
+                        val txt = try { Color(android.graphics.Color.parseColor(colOpt.textHex)) } catch (e: Exception) { CatOtherOnBg }
+                        
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(32.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(bg)
+                                .border(1.dp, if (isSelected) AccentPurple else Color.Transparent, RoundedCornerShape(6.dp))
+                                .clickable { selectedColor = colOpt }
+                                .testTag("select_color_${colOpt.name}"),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = colOpt.name,
+                                color = txt,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (existingCategory != null && existingCategory.id != "Other") {
+                    TextButton(
+                        onClick = { onDelete(existingCategory.id) },
+                        colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFFF2B8B5)),
+                        modifier = Modifier.testTag("cat_edit_delete_btn")
+                    ) {
+                        Text("Delete")
+                    }
+                }
+                
+                Button(
+                    onClick = {
+                        if (name.isNotBlank()) {
+                            onSave(existingCategory?.id, name, selectedIconName, selectedColor.bgHex, selectedColor.textHex)
+                        }
+                    },
+                    modifier = Modifier.testTag("cat_edit_save_btn"),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = AccentPurple,
+                        contentColor = AccentPurpleOnContainer
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Save")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                colors = ButtonDefaults.textButtonColors(contentColor = TextSub),
+                modifier = Modifier.testTag("cat_edit_dismiss_btn")
+            ) {
+                Text("Cancel")
+            }
+        },
+        containerColor = DarkCard,
+        shape = RoundedCornerShape(24.dp)
+    )
 }
