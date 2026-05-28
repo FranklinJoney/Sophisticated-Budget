@@ -1,0 +1,6 @@
+{
+  "name": "Sophisticated Budget",
+  "description": "An elegant Dark Theme Budget & Expense Tracker featuring custom analytical widgets, safety limit calculations, and structured category reports.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
