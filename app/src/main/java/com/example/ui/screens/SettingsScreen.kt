@@ -82,7 +82,8 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 16.dp)
+                .testTag("settings_lazy_column"),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Header

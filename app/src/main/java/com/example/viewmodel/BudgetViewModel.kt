@@ -93,15 +93,15 @@ class BudgetViewModel(application: Application) : AndroidViewModel(application) 
 
     // Expose all transactions flow
     val allTransactions: StateFlow<List<Transaction>> = repository.allTransactions
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     // Expose all budgets flow
     val allBudgets: StateFlow<List<MonthlyBudget>> = repository.allMonthlyBudgets
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     // Expose all categories from database
     val allCategories: StateFlow<List<com.example.data.Category>> = repository.allCategories
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     // Convert to dynamic list of category UI metas
     val categoryMetas: StateFlow<List<CategoryMeta>> = allCategories
@@ -112,7 +112,7 @@ class BudgetViewModel(application: Application) : AndroidViewModel(application) 
                 list.map { CategoryHelpers.fromDb(it) }
             }
         }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), CategoryHelpers.DEFAULT_METAS)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, CategoryHelpers.DEFAULT_METAS)
 
     fun getCategoryMeta(categoryName: String): CategoryMeta {
         return CategoryHelpers.getMeta(categoryName, categoryMetas.value)
@@ -166,7 +166,7 @@ class BudgetViewModel(application: Application) : AndroidViewModel(application) 
         calculateSummary(transactions, budgets, month)
     }.stateIn(
         viewModelScope,
-        SharingStarted.WhileSubscribed(5000),
+        SharingStarted.Eagerly,
         MonthBudgetSummary()
     )
 

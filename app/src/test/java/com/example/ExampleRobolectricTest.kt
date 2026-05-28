@@ -62,4 +62,61 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithTag("nav_home").performClick()
     composeTestRule.waitForIdle()
   }
+
+  @Test
+  fun `test custom category creation and modification`() {
+    // Navigate to Settings Screen
+    composeTestRule.onNodeWithTag("nav_settings").performClick()
+    composeTestRule.waitForIdle()
+
+    // Scroll settings LazyColumn to make add category button viewable/composed
+    composeTestRule.onNodeWithTag("settings_lazy_column")
+        .performScrollToNode(hasTestTag("add_custom_category_btn"))
+    composeTestRule.waitForIdle()
+
+    // Click the create custom category button
+    composeTestRule.onNodeWithTag("add_custom_category_btn").performClick()
+    composeTestRule.waitForIdle()
+
+    // Type a custom category name
+    composeTestRule.onNodeWithTag("cat_edit_name_input").performTextInput("Subscriptions")
+    
+    // Select an icon and a color option from the first-row (fully visible/not virtualized)
+    composeTestRule.onNodeWithTag("select_icon_LocalPlay").performClick()
+    composeTestRule.onNodeWithTag("select_color_Rose").performClick()
+
+    // Click Save
+    composeTestRule.onNodeWithTag("cat_edit_save_btn").performClick()
+    composeTestRule.waitForIdle()
+
+    // Wait and scroll to the newly created category in the list
+    composeTestRule.waitUntil(5000) {
+        composeTestRule.onAllNodesWithTag("manage_cat_Subscriptions").fetchSemanticsNodes().isNotEmpty()
+    }
+    composeTestRule.onNodeWithTag("settings_lazy_column")
+        .performScrollToNode(hasTestTag("manage_cat_Subscriptions"))
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("manage_cat_Subscriptions").assertIsDisplayed()
+
+    // Edit it
+    composeTestRule.onNodeWithTag("manage_cat_Subscriptions").performClick()
+    composeTestRule.waitForIdle()
+
+    // Clear input and change name
+    composeTestRule.onNodeWithTag("cat_edit_name_input").performTextClearance()
+    composeTestRule.onNodeWithTag("cat_edit_name_input").performTextInput("Netflix")
+
+    // Save
+    composeTestRule.onNodeWithTag("cat_edit_save_btn").performClick()
+    composeTestRule.waitForIdle()
+
+    // Wait and scroll to the updated category
+    composeTestRule.waitUntil(5000) {
+        composeTestRule.onAllNodesWithTag("manage_cat_Netflix").fetchSemanticsNodes().isNotEmpty()
+    }
+    composeTestRule.onNodeWithTag("settings_lazy_column")
+        .performScrollToNode(hasTestTag("manage_cat_Netflix"))
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("manage_cat_Netflix").assertIsDisplayed()
+  }
 }
