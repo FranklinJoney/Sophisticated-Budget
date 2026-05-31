@@ -41,8 +41,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            MyApplicationTheme {
-                BudgetAppMain()
+            val viewModel: BudgetViewModel = viewModel()
+            val themeSetting by viewModel.themeSetting.collectAsState()
+            MyApplicationTheme(themeSetting = themeSetting) {
+                BudgetAppMain(viewModel = viewModel)
             }
         }
     }
@@ -149,7 +151,6 @@ fun CustomBottomBar(
             Box(
                 modifier = Modifier
                     .offset(y = (-14).dp)
-                    .testTag("nav_add_transaction")
             ) {
                 Button(
                     onClick = onAddClicked,
@@ -162,7 +163,7 @@ fun CustomBottomBar(
                         defaultElevation = 8.dp,
                         pressedElevation = 2.dp
                     ),
-                    modifier = Modifier.size(56.dp),
+                    modifier = Modifier.size(56.dp).testTag("nav_add_transaction"),
                     contentPadding = PaddingValues(0.dp)
                 ) {
                     Icon(

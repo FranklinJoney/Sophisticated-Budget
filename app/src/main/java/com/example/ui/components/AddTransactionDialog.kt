@@ -390,9 +390,10 @@ fun AddTransactionDialog(
 
                 // Error Warning Block
                 if (showError) {
+                    val errorColor = if (AppColors.isDark) Color(0xFFF2B8B5) else Color(0xFFB3261E)
                     Text(
                         text = errorMsg,
-                        color = Color(0xFFF2B8B5),
+                        color = errorColor,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.fillMaxWidth().testTag("add_trx_error_msg")

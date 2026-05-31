@@ -12,8 +12,20 @@ class BudgetRepository(private val budgetDao: BudgetDao) {
         budgetDao.insertTransaction(transaction)
     }
 
+    suspend fun insertTransactions(transactions: List<Transaction>) {
+        budgetDao.insertTransactions(transactions)
+    }
+
     suspend fun deleteTransaction(transaction: Transaction) {
         budgetDao.deleteTransaction(transaction)
+    }
+
+    suspend fun deleteAllTransactions() {
+        budgetDao.deleteAllTransactions()
+    }
+
+    suspend fun deleteAllMonthlyBudgets() {
+        budgetDao.deleteAllMonthlyBudgets()
     }
 
     suspend fun deleteTransactionById(id: Long) {

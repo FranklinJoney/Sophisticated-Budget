@@ -18,19 +18,33 @@ class BudgetViewModel(application: Application) : AndroidViewModel(application) 
 
     private val repository: BudgetRepository
 
+    private val sharedPrefs = application.getSharedPreferences("budget_tracker_prefs", android.content.Context.MODE_PRIVATE)
+
     // User preferences states
-    private val _userName = MutableStateFlow("Marcus")
+    private val _userName = MutableStateFlow(sharedPrefs.getString("user_name", "Marcus") ?: "Marcus")
     val userName: StateFlow<String> = _userName.asStateFlow()
 
-    private val _currencySymbol = MutableStateFlow("$")
+    private val _currencySymbol = MutableStateFlow(sharedPrefs.getString("currency_symbol", "$") ?: "$")
     val currencySymbol: StateFlow<String> = _currencySymbol.asStateFlow()
 
+    private val _themeSetting = MutableStateFlow(sharedPrefs.getString("theme_setting", "SYSTEM") ?: "SYSTEM")
+    val themeSetting: StateFlow<String> = _themeSetting.asStateFlow()
+
     fun updateUserName(name: String) {
-        _userName.value = name.ifBlank { "User" }
+        val updated = name.ifBlank { "User" }
+        _userName.value = updated
+        sharedPrefs.edit().putString("user_name", updated).apply()
     }
 
     fun updateCurrencySymbol(symbol: String) {
-        _currencySymbol.value = symbol.ifBlank { "$" }
+        val updated = symbol.ifBlank { "$" }
+        _currencySymbol.value = updated
+        sharedPrefs.edit().putString("currency_symbol", updated).apply()
+    }
+
+    fun updateThemeSetting(setting: String) {
+        _themeSetting.value = setting
+        sharedPrefs.edit().putString("theme_setting", setting).apply()
     }
 
     fun formatMoney(amount: Double): String {
@@ -49,10 +63,9 @@ class BudgetViewModel(application: Application) : AndroidViewModel(application) 
 
     fun clearAllData() {
         viewModelScope.launch {
-            val database = AppDatabase.getDatabase(getApplication())
-            // Deletes elements
-            allTransactions.value.forEach { repository.deleteTransaction(it) }
-            allBudgets.value.forEach { /* delete budget or override */ }
+            // Bulk delete all transactions and budgets in highly optimized queries
+            repository.deleteAllTransactions()
+            repository.deleteAllMonthlyBudgets()
             
             // Delete custom categories and rewrite defaults
             val existingCats = repository.allCategories.first()
@@ -323,8 +336,10 @@ class BudgetViewModel(application: Application) : AndroidViewModel(application) 
             return cal.timeInMillis
         }
 
+        val transactionsToSeed = mutableListOf<Transaction>()
+
         // Income - Monthly Salary (at the start of the month)
-        repository.insertTransaction(
+        transactionsToSeed.add(
             Transaction(
                 title = "Monthly Salary",
                 amount = 3200.0,
@@ -336,7 +351,7 @@ class BudgetViewModel(application: Application) : AndroidViewModel(application) 
         )
 
         // Income - Freelance Project
-        repository.insertTransaction(
+        transactionsToSeed.add(
             Transaction(
                 title = "Design Freelance payment",
                 amount = 450.0,
@@ -357,7 +372,7 @@ class BudgetViewModel(application: Application) : AndroidViewModel(application) 
         foodTrxs.forEachIndexed { i, pair ->
             // Spread evenly throughout the active month
             val day = ((i * 2) + 2).coerceAtMost(today)
-            repository.insertTransaction(
+            transactionsToSeed.add(
                 Transaction(
                     title = pair.second,
                     amount = pair.first,
@@ -376,7 +391,7 @@ class BudgetViewModel(application: Application) : AndroidViewModel(application) 
         )
         transportTrxs.forEachIndexed { i, pair ->
             val day = ((i * 3) + 3).coerceAtMost(today)
-            repository.insertTransaction(
+            transactionsToSeed.add(
                 Transaction(
                     title = pair.second,
                     amount = pair.first,
@@ -394,7 +409,7 @@ class BudgetViewModel(application: Application) : AndroidViewModel(application) 
         )
         shoppingTrxs.forEachIndexed { i, pair ->
             val day = ((i * 5) + 4).coerceAtMost(today)
-            repository.insertTransaction(
+            transactionsToSeed.add(
                 Transaction(
                     title = pair.second,
                     amount = pair.first,
@@ -406,7 +421,7 @@ class BudgetViewModel(application: Application) : AndroidViewModel(application) 
         }
 
         // Utilities
-        repository.insertTransaction(
+        transactionsToSeed.add(
             Transaction(
                 title = "Electricity & Water Bill",
                 amount = 120.0,
@@ -418,7 +433,7 @@ class BudgetViewModel(application: Application) : AndroidViewModel(application) 
         )
 
         // Entertainment
-        repository.insertTransaction(
+        transactionsToSeed.add(
             Transaction(
                 title = "Movie Night - IMAX",
                 amount = 45.0,
@@ -427,6 +442,9 @@ class BudgetViewModel(application: Application) : AndroidViewModel(application) 
                 dateMillis = getTimestampForDay(14)
             )
         )
+
+        // Perform single bulk insert for high database performance
+        repository.insertTransactions(transactionsToSeed)
     }
 }
 

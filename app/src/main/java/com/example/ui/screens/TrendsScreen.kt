@@ -132,10 +132,11 @@ fun TrendsScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    val inflowColor = if (AppColors.isDark) Color(0xFFC2E7FF) else Color(0xFF006699)
                     MetricCard(
                         title = "Month Inflow",
                         amount = viewModel.formatMoney(summary.totalIncome),
-                        accentColor = Color(0xFFC2E7FF),
+                        accentColor = inflowColor,
                         modifier = Modifier.weight(1f)
                     )
                     MetricCard(
@@ -323,7 +324,7 @@ fun RingChartVisualizer(
                 )
                 Text(
                     text = viewModel.formatMoneyCompact(totalExpense),
-                    color = Color.White,
+                    color = TextLight,
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -379,20 +380,26 @@ fun DailyBarChartVisualizer(
                 fontWeight = FontWeight.Medium
             )
             
+            val safetyLimitBg = if (AppColors.isDark) Color(0xFF2B2930) else Color(0xFFFFEBEE)
+            val safetyLimitTxt = if (AppColors.isDark) Color(0xFFF2B8B5) else Color(0xFFD32F2F)
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFF2B2930))
+                    .background(safetyLimitBg)
                     .padding(horizontal = 8.dp, vertical = 4.dp)
             ) {
                 Text(
                     text = "Safety Max: ${viewModel.formatMoney(summary.dailyBudgetLimit)} / Day",
-                    color = Color(0xFFF2B8B5),
+                    color = safetyLimitTxt,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
         }
+
+        val isDark = AppColors.isDark
+        val borderCol = DarkBorder
+        val accentPurpleCol = AccentPurple
 
         // Horizontal Graph Canvas
         Box(
@@ -413,7 +420,7 @@ fun DailyBarChartVisualizer(
                 for (i in 0 until helperLines) {
                     val y = (graphHeight / (helperLines - 1)) * i
                     drawLine(
-                        color = DarkBorder.copy(alpha = 0.5f),
+                        color = borderCol.copy(alpha = 0.5f),
                         start = Offset(0f, y),
                         end = Offset(canvasWidth, y),
                         strokeWidth = 1.dp.toPx()
@@ -423,8 +430,9 @@ fun DailyBarChartVisualizer(
                 // Draw Daily Budget Safety Margin Threshold line
                 val budgetLimitFraction = (summary.dailyBudgetLimit / maxSpent).coerceIn(0.0, 1.0)
                 val lineY = (graphHeight - (graphHeight * budgetLimitFraction)).toFloat()
+                val safetyLineColor = if (isDark) Color(0xFFF2B8B5) else Color(0xFFD32F2F)
                 drawLine(
-                    color = Color(0xFFF2B8B5),
+                    color = safetyLineColor,
                     start = Offset(0f, lineY),
                     end = Offset(canvasWidth, lineY),
                     strokeWidth = 1.5.dp.toPx(),
@@ -445,11 +453,11 @@ fun DailyBarChartVisualizer(
 
                     // Colors vary depending on if they exceed daily budget safety limit
                     val barColor = if (spentOnDay > summary.dailyBudgetLimit) {
-                        Color(0xFFF2B8B5) // Warn Red style
+                        if (isDark) Color(0xFFF2B8B5) else Color(0xFFD32F2F) // Warn Red style
                     } else if (spentOnDay > 0) {
-                        AccentPurple
+                        accentPurpleCol
                     } else {
-                        DarkBorder.copy(alpha = 0.3f)
+                        borderCol.copy(alpha = 0.3f)
                     }
 
                     // Draw capsule

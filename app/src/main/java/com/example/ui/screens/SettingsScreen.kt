@@ -38,6 +38,7 @@ fun SettingsScreen(
 ) {
     val userName by viewModel.userName.collectAsState()
     val currencySymbol by viewModel.currencySymbol.collectAsState()
+    val themeSetting by viewModel.themeSetting.collectAsState()
 
     var editingName by remember { mutableStateOf(false) }
     var nameInput by remember { mutableStateOf("") }
@@ -51,12 +52,13 @@ fun SettingsScreen(
             title = { Text("Reset Database?", color = TextLight) },
             text = { Text("This will clear all transactions and re-seed the default baseline metrics for the current month. Are you sure?", color = TextSub) },
             confirmButton = {
+                val warningConfirmColor = if (AppColors.isDark) Color(0xFFF2B8B5) else Color(0xFFB3261E)
                 TextButton(
                     onClick = {
                         viewModel.clearAllData()
                         showResetDialog = false
                     },
-                    colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFFF2B8B5))
+                    colors = ButtonDefaults.textButtonColors(contentColor = warningConfirmColor)
                 ) {
                     Text("Decline & Clear")
                 }
@@ -245,6 +247,54 @@ fun SettingsScreen(
                                         text = sym,
                                         color = if (isSelected) AccentPurpleOnContainer else TextLight,
                                         fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Display Theme Configuration Row
+            item {
+                SettingsGroup(title = "Display Theme Settings") {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(
+                            text = "Choose active aesthetic design theme:",
+                            color = TextSub,
+                            fontSize = 13.sp
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            val options = listOf(
+                                Triple("LIGHT", "☀️ Light", "theme_light_btn"),
+                                Triple("DARK", "🌙 Dark", "theme_dark_btn"),
+                                Triple("SYSTEM", "🌓 System", "theme_system_btn")
+                            )
+                            for ((setting, label, tag) in options) {
+                                val isSelected = setting == themeSetting
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(42.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(if (isSelected) AccentPurpleContainer else DarkCategory)
+                                        .border(
+                                            1.dp,
+                                            if (isSelected) AccentPurple else DarkBorder,
+                                            RoundedCornerShape(12.dp)
+                                        )
+                                        .clickable { viewModel.updateThemeSetting(setting) }
+                                        .testTag(tag),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = label,
+                                        color = if (isSelected) AccentPurpleOnContainer else TextLight,
+                                        fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
@@ -454,17 +504,19 @@ fun AdminRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        val warningIconBg = if (AppColors.isDark) Color(0xFF601410).copy(alpha = 0.5f) else Color(0xFFFFEBEE)
+        val warningIconTint = if (AppColors.isDark) Color(0xFFF2B8B5) else Color(0xFFD32F2F)
         Box(
             modifier = Modifier
                 .size(36.dp)
                 .clip(CircleShape)
-                .background(Color(0xFF601410).copy(alpha = 0.5f)),
+                .background(warningIconBg),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = Color(0xFFF2B8B5),
+                tint = warningIconTint,
                 modifier = Modifier.size(18.dp)
             )
         }
@@ -684,9 +736,10 @@ fun CategoryEditDialog(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 if (existingCategory != null && existingCategory.id != "Other") {
+                    val deleteBtnColor = if (AppColors.isDark) Color(0xFFF2B8B5) else Color(0xFFB3261E)
                     TextButton(
                         onClick = { onDelete(existingCategory.id) },
-                        colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFFF2B8B5)),
+                        colors = ButtonDefaults.textButtonColors(contentColor = deleteBtnColor),
                         modifier = Modifier.testTag("cat_edit_delete_btn")
                     ) {
                         Text("Delete")

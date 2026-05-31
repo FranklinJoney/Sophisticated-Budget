@@ -1,6 +1,9 @@
 package com.example.ui.theme
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.staticCompositionLocalOf
 
 val Purple80 = Color(0xFFD0BCFF)
 val PurpleGrey80 = Color(0xFFCCC2DC)
@@ -10,19 +13,105 @@ val Purple40 = Color(0xFF6650a4)
 val PurpleGrey40 = Color(0xFF625b71)
 val Pink40 = Color(0xFF7D5260)
 
-// Sophisticated Dark Color Tokens
-val DarkBG = Color(0xFF1C1B1F)
-val DarkCard = Color(0xFF313033)
-val DarkCategory = Color(0xFF2B2930)
-val DarkBorder = Color(0xFF49454F)
-val TextLight = Color(0xFFE6E1E5)
-val TextMuted = Color(0xFF938F99)
-val TextSub = Color(0xFFCAC4D0)
+val LocalThemeIsDark = staticCompositionLocalOf { true }
 
-val AccentPurple = Color(0xFFD0BCFF)
-val AccentPurpleContainer = Color(0xFFEADDFF)
-val AccentPurpleOnContainer = Color(0xFF21005D)
-val AccentPurplePressed = Color(0xFF49454F)
+// Dynamic design tokens for theme shifting support
+object AppColors {
+    val isDark: Boolean
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalThemeIsDark.current
+
+    val bg: Color
+        @Composable
+        @ReadOnlyComposable
+        get() = if (isDark) Color(0xFF1C1B1F) else Color(0xFFFDF7FF)
+
+    val card: Color
+        @Composable
+        @ReadOnlyComposable
+        get() = if (isDark) Color(0xFF313033) else Color(0xFFF3EDF7)
+
+    val category: Color
+        @Composable
+        @ReadOnlyComposable
+        get() = if (isDark) Color(0xFF2B2930) else Color(0xFFE8DEF8)
+
+    val border: Color
+        @Composable
+        @ReadOnlyComposable
+        get() = if (isDark) Color(0xFF49454F) else Color(0xFFCAC4D0)
+
+    val textLight: Color
+        @Composable
+        @ReadOnlyComposable
+        get() = if (isDark) Color(0xFFE6E1E5) else Color(0xFF1C1B1F)
+
+    val textMuted: Color
+        @Composable
+        @ReadOnlyComposable
+        get() = if (isDark) Color(0xFF938F99) else Color(0xFF49454F)
+
+    val textSub: Color
+        @Composable
+        @ReadOnlyComposable
+        get() = if (isDark) Color(0xFFCAC4D0) else Color(0xFF49454F)
+}
+
+val DarkBG: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = AppColors.bg
+
+val DarkCard: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = AppColors.card
+
+val DarkCategory: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = AppColors.category
+
+val DarkBorder: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = AppColors.border
+
+val TextLight: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = AppColors.textLight
+
+val TextMuted: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = AppColors.textMuted
+
+val TextSub: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = AppColors.textSub
+
+val AccentPurple: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = if (AppColors.isDark) Color(0xFFD0BCFF) else Color(0xFF6750A4)
+
+val AccentPurpleContainer: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = if (AppColors.isDark) Color(0xFFEADDFF) else Color(0xFFEADDFF)
+
+val AccentPurpleOnContainer: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = if (AppColors.isDark) Color(0xFF21005D) else Color(0xFF21005D)
+
+val AccentPurplePressed: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = if (AppColors.isDark) Color(0xFF49454F) else Color(0xFFCAC4D0)
 
 // Category Specific Accent Colors (Matching design HTML styling)
 val CatDiningBg = Color(0xFFE8DEF8)

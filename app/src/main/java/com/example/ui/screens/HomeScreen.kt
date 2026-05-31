@@ -259,7 +259,7 @@ fun RemainingBudgetCard(
                     ) {
                         Text(
                             text = viewModel.formatMoneyCompact(remainingAmount),
-                            color = Color.White,
+                            color = TextLight,
                             fontSize = 36.sp,
                             fontWeight = FontWeight.Light
                         )

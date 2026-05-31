@@ -13,8 +13,14 @@ interface BudgetDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTransaction(transaction: Transaction)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTransactions(transactions: List<Transaction>)
+
     @Delete
     suspend fun deleteTransaction(transaction: Transaction)
+
+    @Query("DELETE FROM transactions")
+    suspend fun deleteAllTransactions()
 
     @Query("DELETE FROM transactions WHERE id = :id")
     suspend fun deleteTransactionById(id: Long)
@@ -22,6 +28,9 @@ interface BudgetDao {
     // Monthly Budgets
     @Query("SELECT * FROM monthly_budgets")
     fun getAllMonthlyBudgetsFlow(): Flow<List<MonthlyBudget>>
+
+    @Query("DELETE FROM monthly_budgets")
+    suspend fun deleteAllMonthlyBudgets()
 
     @Query("SELECT * FROM monthly_budgets WHERE yearMonth = :yearMonth LIMIT 1")
     suspend fun getBudgetForMonth(yearMonth: String): MonthlyBudget?

@@ -126,6 +126,26 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithTag("nav_budget").performClick()
     composeTestRule.waitForIdle()
 
+    // Wait until Budget Screen is fully loaded and stable
+    composeTestRule.onNodeWithTag("edit_budget_btn").assertIsDisplayed()
+
+    // Click on '+' add transaction button in CustomBottomBar first (before any scrolling)
+    composeTestRule.onNodeWithTag("nav_add_transaction").performClick()
+    composeTestRule.waitForIdle()
+
+    // Assert date presets are displayed
+    composeTestRule.onNodeWithTag("date_preset_Today").assertExists()
+    composeTestRule.onNodeWithTag("date_preset_Yesterday").assertExists()
+    composeTestRule.onNodeWithTag("date_preset_Last Month").assertExists()
+    composeTestRule.onNodeWithTag("date_preset_Last Year").assertExists()
+
+    // Fill in a yesterday expense
+    composeTestRule.onNodeWithTag("add_trx_title").performTextInput("Yesterday Dinner")
+    composeTestRule.onNodeWithTag("add_trx_amount").performTextInput("150.00")
+    composeTestRule.onNodeWithTag("date_preset_Yesterday").performClick()
+    composeTestRule.onNodeWithTag("save_trx_btn").performClick()
+    composeTestRule.waitForIdle()
+
     // Scroll container to make ledger tabs visible/composed
     composeTestRule.onNodeWithTag("budget_lazy_column")
         .performScrollToNode(hasTestTag("ledger_tab_DAILY"))
@@ -135,23 +155,6 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithTag("ledger_tab_DAILY").assertIsDisplayed()
     composeTestRule.onNodeWithTag("ledger_tab_MONTHLY").assertIsDisplayed()
     composeTestRule.onNodeWithTag("ledger_tab_YEARLY").assertIsDisplayed()
-
-    // Click on '+' add transaction button in CustomBottomBar
-    composeTestRule.onNodeWithTag("nav_add_transaction").performClick()
-    composeTestRule.waitForIdle()
-
-    // Assert date presets are displayed
-    composeTestRule.onNodeWithTag("date_preset_Today").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("date_preset_Yesterday").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("date_preset_Last Month").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("date_preset_Last Year").assertIsDisplayed()
-
-    // Fill in a yesterday expense
-    composeTestRule.onNodeWithTag("add_trx_title").performTextInput("Yesterday Dinner")
-    composeTestRule.onNodeWithTag("add_trx_amount").performTextInput("150.00")
-    composeTestRule.onNodeWithTag("date_preset_Yesterday").performClick()
-    composeTestRule.onNodeWithTag("save_trx_btn").performClick()
-    composeTestRule.waitForIdle()
 
     // Scroll to Monthly tab and click it
     composeTestRule.onNodeWithTag("budget_lazy_column")

@@ -202,19 +202,17 @@ fun BudgetScreen(
                     val displayLabel = try {
                         val dateObj = sdfDayKey.parse(dateKey)
                         val calNow = Calendar.getInstance()
+                        val calYesterday = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -1) }
                         val calTrx = Calendar.getInstance().apply { time = dateObj ?: Date() }
                         
                         if (calNow.get(Calendar.YEAR) == calTrx.get(Calendar.YEAR) &&
                             calNow.get(Calendar.DAY_OF_YEAR) == calTrx.get(Calendar.DAY_OF_YEAR)) {
                             "Today"
+                        } else if (calYesterday.get(Calendar.YEAR) == calTrx.get(Calendar.YEAR) &&
+                            calYesterday.get(Calendar.DAY_OF_YEAR) == calTrx.get(Calendar.DAY_OF_YEAR)) {
+                            "Yesterday"
                         } else {
-                            calNow.add(Calendar.DAY_OF_YEAR, -1)
-                            if (calNow.get(Calendar.YEAR) == calTrx.get(Calendar.YEAR) &&
-                                calNow.get(Calendar.DAY_OF_YEAR) == calTrx.get(Calendar.DAY_OF_YEAR)) {
-                                "Yesterday"
-                            } else {
-                                SimpleDateFormat("dd MMMM, yyyy", Locale.US).format(dateObj ?: Date())
-                            }
+                            SimpleDateFormat("dd MMMM, yyyy", Locale.US).format(dateObj ?: Date())
                         }
                     } catch (e: Exception) {
                         dateKey
@@ -468,6 +466,9 @@ fun BudgetScreen(
                         // Daily warning indicator
                         HorizontalDivider(color = DarkBorder, thickness = 1.dp)
 
+                        val warningIconBg = if (AppColors.isDark) Color(0xFF601410).copy(alpha = 0.5f) else Color(0xFFFFEBEE)
+                        val warningIconTint = if (AppColors.isDark) Color(0xFFF2B8B5) else Color(0xFFD32F2F)
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.Top,
@@ -477,13 +478,13 @@ fun BudgetScreen(
                                 modifier = Modifier
                                     .size(36.dp)
                                     .clip(CircleShape)
-                                    .background(Color(0xFF601410).copy(alpha = 0.5f)),
+                                    .background(warningIconBg),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Warning,
                                     contentDescription = null,
-                                    tint = Color(0xFFF2B8B5),
+                                    tint = warningIconTint,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
@@ -645,12 +646,14 @@ fun BudgetScreen(
             // Dynamic filter badge/reminders
             if (ledgerTab == "DAILY" && selectedDayFilter != null) {
                 item {
+                    val filterBg = if (AppColors.isDark) Color(0xFF322330) else Color(0xFFFBF1F9)
+                    val filterBorder = if (AppColors.isDark) Color(0xFF6B3350) else Color(0xFFE8B2D0)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(14.dp))
-                            .background(Color(0xFF322330))
-                            .border(1.dp, Color(0xFF6B3350), RoundedCornerShape(14.dp))
+                            .background(filterBg)
+                            .border(1.dp, filterBorder, RoundedCornerShape(14.dp))
                             .padding(12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
@@ -1016,13 +1019,13 @@ fun MonthCalendarView(
                                 // Sleek dynamic category styling for custom design
                                 val baseBgColor = when {
                                     isSelected -> AccentPurple
-                                    dayInfo.spentSum > 0 -> Color(0xFF3F2731) // Heatmap highlight for spent
-                                    dayInfo.incomeSum > 0 -> Color(0xFF1E3525) // soft green highlight for income
+                                    dayInfo.spentSum > 0 -> if (AppColors.isDark) Color(0xFF3F2731) else Color(0xFFFFEBEE) // Heatmap highlight for spent
+                                    dayInfo.incomeSum > 0 -> if (AppColors.isDark) Color(0xFF1E3525) else Color(0xFFE8F5E9) // soft green highlight for income
                                     else -> DarkCategory
                                 }
                                 
                                 val textColor = if (isSelected) AccentPurpleOnContainer else TextLight
-                                val borderColor = if (isSelected) AccentPurple else if (dayInfo.spentSum > 0) Color(0xFF6B3350) else DarkBorder
+                                val borderColor = if (isSelected) AccentPurple else if (dayInfo.spentSum > 0) (if (AppColors.isDark) Color(0xFF6B3350) else Color(0xFFFFCDD2)) else (if (dayInfo.incomeSum > 0) (if (AppColors.isDark) Color(0xFF388E3C) else Color(0xFFC8E6C9)) else DarkBorder)
                                 
                                 Box(
                                     modifier = Modifier
@@ -1055,7 +1058,7 @@ fun MonthCalendarView(
                                         if (dayInfo.spentSum > 0) {
                                             Text(
                                                 text = "${currencySymbol}${dayInfo.spentSum.toInt()}",
-                                                color = if (isSelected) AccentPurpleOnContainer else Color(0xFFF2B8B5),
+                                                color = if (isSelected) AccentPurpleOnContainer else if (AppColors.isDark) Color(0xFFF2B8B5) else Color(0xFFD32F2F),
                                                 fontSize = 7.sp,
                                                 fontWeight = FontWeight.SemiBold,
                                                 maxLines = 1,
@@ -1064,7 +1067,7 @@ fun MonthCalendarView(
                                         } else if (dayInfo.incomeSum > 0) {
                                             Text(
                                                 text = "+${currencySymbol}${dayInfo.incomeSum.toInt()}",
-                                                color = if (isSelected) AccentPurpleOnContainer else Color(0xFF81C784),
+                                                color = if (isSelected) AccentPurpleOnContainer else if (AppColors.isDark) Color(0xFF81C784) else Color(0xFF2E7D32),
                                                 fontSize = 7.sp,
                                                 fontWeight = FontWeight.SemiBold,
                                                 maxLines = 1,
