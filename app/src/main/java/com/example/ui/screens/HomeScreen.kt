@@ -15,6 +15,12 @@ import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import com.example.DatadogMonitor
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -43,6 +49,9 @@ fun HomeScreen(
     val summary by viewModel.currentMonthBudgetState.collectAsState()
     val userName by viewModel.userName.collectAsState()
     val rawMonth by viewModel.selectedMonth.collectAsState()
+
+    var selectedCategoryForModal by remember { mutableStateOf<String?>(null) }
+    var showAllTransactionsModal by remember { mutableStateOf(false) }
 
     // Format raw month e.g. "2026-05" into "May 2026"
     val displayMonth = remember(rawMonth) {
@@ -146,6 +155,61 @@ fun HomeScreen(
                 )
             }
 
+            // Clickable Inspect All Transactions Button/Card
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            // Track in Datadog monitor
+                            DatadogMonitor.trackClick(
+                                name = "view_all_transactions_card_clicked",
+                                attributes = mapOf(
+                                    "total_transactions" to summary.transactions.size,
+                                    "selected_month" to rawMonth
+                                )
+                            )
+                            showAllTransactionsModal = true
+                        }
+                        .testTag("show_all_transactions_card"),
+                    colors = CardDefaults.cardColors(containerColor = DarkCategory),
+                    shape = RoundedCornerShape(20.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, DarkBorder)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(18.dp).fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Text("💸", fontSize = 20.sp)
+                            Column {
+                                Text(
+                                    text = "Inspect All Transactions",
+                                    color = TextLight,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = "See all ${summary.transactions.size} ledger entries for this month",
+                                    color = TextSub,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+                        Icon(
+                            imageVector = Icons.Default.ArrowForward,
+                            contentDescription = "View All Transactions",
+                            tint = AccentPurple,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
+
             // Category Breakdown Section
             item {
                 Row(
@@ -198,7 +262,18 @@ fun HomeScreen(
                 ) { report ->
                     CategoryRowItem(
                         report = report,
-                        viewModel = viewModel
+                        viewModel = viewModel,
+                        onClick = {
+                            // Track in Datadog monitor
+                            DatadogMonitor.trackClick(
+                                name = "view_category_transactions_clicked",
+                                attributes = mapOf(
+                                    "category" to report.category,
+                                    "transaction_count" to report.transactionCount
+                                )
+                            )
+                            selectedCategoryForModal = report.category
+                        }
                     )
                 }
             }
@@ -206,6 +281,28 @@ fun HomeScreen(
             item {
                 Spacer(modifier = Modifier.height(30.dp))
             }
+        }
+
+        // Overlays for viewing transactions on click on home page
+        if (showAllTransactionsModal) {
+            TransactionsListDialog(
+                title = "All Monthly Transactions",
+                transactions = summary.transactions,
+                viewModel = viewModel,
+                onDismiss = { showAllTransactionsModal = false }
+            )
+        }
+
+        selectedCategoryForModal?.let { categoryName ->
+            val filteredTransactions = remember(categoryName, summary.transactions) {
+                summary.transactions.filter { it.category == categoryName }
+            }
+            TransactionsListDialog(
+                title = "Category: $categoryName",
+                transactions = filteredTransactions,
+                viewModel = viewModel,
+                onDismiss = { selectedCategoryForModal = null }
+            )
         }
     }
 }
@@ -332,7 +429,8 @@ fun RemainingBudgetCard(
 @Composable
 fun CategoryRowItem(
     report: com.example.viewmodel.CategoryReport,
-    viewModel: BudgetViewModel
+    viewModel: BudgetViewModel,
+    onClick: () -> Unit = {}
 ) {
     val categoryMetas by viewModel.categoryMetas.collectAsState()
     val meta = remember(report.category, categoryMetas) {
@@ -344,6 +442,7 @@ fun CategoryRowItem(
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .background(DarkCategory)
+            .clickable { onClick() }
             .padding(16.dp)
             .testTag("category_row_${meta.id.replace(" ", "_")}"),
         verticalAlignment = Alignment.CenterVertically,
@@ -437,6 +536,189 @@ fun EmptyCategoryState() {
                 fontSize = 13.sp,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
+        }
+    }
+}
+
+@Composable
+fun TransactionsListDialog(
+    title: String,
+    transactions: List<com.example.data.Transaction>,
+    viewModel: com.example.viewmodel.BudgetViewModel,
+    onDismiss: () -> Unit
+) {
+    val categoryMetas by viewModel.categoryMetas.collectAsState()
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth(0.92f)
+                .fillMaxHeight(0.75f)
+                .border(1.dp, DarkBorder, RoundedCornerShape(24.dp)),
+            colors = CardDefaults.cardColors(containerColor = DarkBG),
+            shape = RoundedCornerShape(24.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(20.dp)
+            ) {
+                // Header with Close option
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = title,
+                            color = TextLight,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        val spent = transactions.filter { it.type == "EXPENSE" }.sumOf { it.amount }
+                        val income = transactions.filter { it.type == "INCOME" }.sumOf { it.amount }
+                        Text(
+                            text = "Outflow: ${viewModel.formatMoney(spent)} • Inflow: ${viewModel.formatMoney(income)}",
+                            color = TextMuted,
+                            fontSize = 11.sp,
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
+                    }
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(DarkCategory)
+                            .size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Dismiss transactions list filter",
+                            tint = TextLight,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+
+                HorizontalDivider(color = DarkBorder, thickness = 1.dp, modifier = Modifier.padding(vertical = 12.dp))
+
+                // Scrollable List of Custom Transactions
+                if (transactions.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "No recorded transactions for this period.",
+                            color = TextMuted,
+                            fontSize = 13.sp
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        items(transactions) { transaction ->
+                            val meta = remember(transaction.category, categoryMetas) {
+                                viewModel.getCategoryMeta(transaction.category)
+                            }
+                            val dateStr = remember(transaction.dateMillis) {
+                                val sdf = SimpleDateFormat("dd MMM, hh:mm a", Locale.US)
+                                sdf.format(Date(transaction.dateMillis))
+                            }
+                            val isExpense = transaction.type == "EXPENSE"
+                            val moneyColor = if (isExpense) TextLight else Color(0xFF81C784)
+                            val prefixSign = if (isExpense) "-" else "+"
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(DarkCategory)
+                                    .padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                // Category Avatar Container
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(meta.bgColor),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = meta.icon,
+                                        contentDescription = null,
+                                        tint = meta.iconColor,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+
+                                // Details Column
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = transaction.title,
+                                        color = TextLight,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = "$dateStr • ${meta.displayName}",
+                                        color = TextMuted,
+                                        fontSize = 10.sp,
+                                        modifier = Modifier.padding(top = 1.dp)
+                                    )
+                                }
+
+                                // Money Label and deletion trigger
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(
+                                        text = "$prefixSign${viewModel.formatMoney(transaction.amount)}",
+                                        color = moneyColor,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    IconButton(
+                                        onClick = {
+                                            viewModel.deleteTransaction(transaction)
+                                            DatadogMonitor.trackClick(
+                                                name = "delete_transaction_from_home_dialog",
+                                                attributes = mapOf("id" to transaction.id, "category" to transaction.category)
+                                            )
+                                        },
+                                        modifier = Modifier
+                                            .size(32.dp)
+                                            .clip(CircleShape)
+                                            .background(DarkBG)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = "Delete custom transaction",
+                                            tint = Color(0xFFE57373),
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

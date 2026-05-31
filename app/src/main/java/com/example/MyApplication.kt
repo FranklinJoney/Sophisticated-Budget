@@ -6,7 +6,11 @@ class MyApplication : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        // Datadog initialization is disabled because its dynamic receiver registration 
-        // causes unrecoverable SecurityExceptions on Android 14+ (Target SDK 36).
+        // Setup a global Uncaught Exception Handler to capture and print any startup or runtime failures loudly
+        val originalHandler = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            android.util.Log.e("MyApplication", "!!! CRITICAL UNCAUGHT EXCEPTION !!! Thread: ${thread.name}", throwable)
+            originalHandler?.uncaughtException(thread, throwable)
+        }
     }
 }
