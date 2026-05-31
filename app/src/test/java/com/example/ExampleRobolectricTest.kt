@@ -119,4 +119,52 @@ class ExampleRobolectricTest {
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("manage_cat_Netflix").assertIsDisplayed()
   }
+
+  @Test
+  fun `test relative date presets and ledger mode switching`() {
+    // Switch to Budget screen
+    composeTestRule.onNodeWithTag("nav_budget").performClick()
+    composeTestRule.waitForIdle()
+
+    // Scroll container to make ledger tabs visible/composed
+    composeTestRule.onNodeWithTag("budget_lazy_column")
+        .performScrollToNode(hasTestTag("ledger_tab_DAILY"))
+    composeTestRule.waitForIdle()
+
+    // Ensure the tab selectors exist and are displayed
+    composeTestRule.onNodeWithTag("ledger_tab_DAILY").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("ledger_tab_MONTHLY").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("ledger_tab_YEARLY").assertIsDisplayed()
+
+    // Click on '+' add transaction button in CustomBottomBar
+    composeTestRule.onNodeWithTag("nav_add_transaction").performClick()
+    composeTestRule.waitForIdle()
+
+    // Assert date presets are displayed
+    composeTestRule.onNodeWithTag("date_preset_Today").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("date_preset_Yesterday").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("date_preset_Last Month").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("date_preset_Last Year").assertIsDisplayed()
+
+    // Fill in a yesterday expense
+    composeTestRule.onNodeWithTag("add_trx_title").performTextInput("Yesterday Dinner")
+    composeTestRule.onNodeWithTag("add_trx_amount").performTextInput("150.00")
+    composeTestRule.onNodeWithTag("date_preset_Yesterday").performClick()
+    composeTestRule.onNodeWithTag("save_trx_btn").performClick()
+    composeTestRule.waitForIdle()
+
+    // Scroll to Monthly tab and click it
+    composeTestRule.onNodeWithTag("budget_lazy_column")
+        .performScrollToNode(hasTestTag("ledger_tab_MONTHLY"))
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("ledger_tab_MONTHLY").performClick()
+    composeTestRule.waitForIdle()
+
+    // Scroll to Yearly tab and click it
+    composeTestRule.onNodeWithTag("budget_lazy_column")
+        .performScrollToNode(hasTestTag("ledger_tab_YEARLY"))
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("ledger_tab_YEARLY").performClick()
+    composeTestRule.waitForIdle()
+  }
 }

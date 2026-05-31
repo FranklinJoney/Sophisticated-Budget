@@ -259,6 +259,75 @@ fun AddTransactionDialog(
                     }
                 }
 
+                // Quick Past-Date Presets for Relative/Store Past Expenses
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Store Past Expense Presets:", color = TextMuted, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val presets = listOf(
+                            Triple("Today", 0, "📅"),
+                            Triple("Yesterday", -1, "🕒"),
+                            Triple("Last Month", -30, "🗓️"),
+                            Triple("Last Year", -365, "⏳")
+                        )
+                        presets.forEach { (label, daysOffset, icon) ->
+                            val isSelected = remember(selectedDateMillis, daysOffset) {
+                                val targetCal = Calendar.getInstance().apply {
+                                    if (daysOffset != 0) {
+                                        add(Calendar.DAY_OF_YEAR, daysOffset)
+                                    }
+                                }
+                                val curCal = Calendar.getInstance().apply { timeInMillis = selectedDateMillis }
+                                targetCal.get(Calendar.YEAR) == curCal.get(Calendar.YEAR) &&
+                                        targetCal.get(Calendar.DAY_OF_YEAR) == curCal.get(Calendar.DAY_OF_YEAR)
+                            }
+
+                            val chipBg = if (isSelected) AccentPurple else DarkCategory
+                            val chipText = if (isSelected) AccentPurpleOnContainer else TextLight
+                            val borderCol = if (isSelected) AccentPurple else DarkBorder
+
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                  .clip(RoundedCornerShape(10.dp))
+                                    .background(chipBg)
+                                    .border(1.dp, borderCol, RoundedCornerShape(10.dp))
+                                    .clickable {
+                                        val newCal = Calendar.getInstance()
+                                        if (daysOffset != 0) {
+                                            newCal.add(Calendar.DAY_OF_YEAR, daysOffset)
+                                        }
+                                        selectedDateMillis = newCal.timeInMillis
+                                    }
+                                    .padding(vertical = 8.dp)
+                                    .testTag("date_preset_$label"),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(icon, fontSize = 14.sp)
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = label,
+                                        color = chipText,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    Text(
+                        text = "💡 Tip: Tap 'Transaction Date' above to pick any exact past date, month or year manually.",
+                        color = TextMuted,
+                        fontSize = 10.sp,
+                        lineHeight = 14.sp,
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
+
                 // Category Selector Title
                 Text(
                     text = "Select Category",
