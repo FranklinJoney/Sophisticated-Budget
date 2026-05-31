@@ -54,54 +54,95 @@ class MainActivity : ComponentActivity() {
 fun BudgetAppMain(
     viewModel: BudgetViewModel = viewModel()
 ) {
-    var currentTab by remember { mutableStateOf(AppTab.HOME) }
-    var showAddDialog by remember { mutableStateOf(false) }
+    val isUserLoggedIn by viewModel.isUserLoggedIn.collectAsState()
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        containerColor = DarkBG,
-        bottomBar = {
-            CustomBottomBar(
-                selectedTab = currentTab,
-                onTabSelected = { currentTab = it },
-                onAddClicked = { showAddDialog = true }
-            )
-        }
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(bottom = innerPadding.calculateBottomPadding()) // Account for bottom bar
-        ) {
-            // Animated transitions between screen tabs
-            when (currentTab) {
-                AppTab.HOME -> HomeScreen(
-                    viewModel = viewModel,
-                    onNavigateToReports = { currentTab = AppTab.TRENDS },
-                    modifier = Modifier.fillMaxSize()
-                )
-                AppTab.TRENDS -> TrendsScreen(
-                    viewModel = viewModel,
-                    modifier = Modifier.fillMaxSize()
-                )
-                AppTab.BUDGET -> BudgetScreen(
-                    viewModel = viewModel,
-                    modifier = Modifier.fillMaxSize()
-                )
-                AppTab.SETTINGS -> SettingsScreen(
-                    viewModel = viewModel,
-                    modifier = Modifier.fillMaxSize()
-                )
+    if (!isUserLoggedIn) {
+        com.example.ui.screens.LoginScreen(
+            onLoginSuccess = { email, displayName ->
+                viewModel.logIn(email, displayName)
+            },
+            modifier = Modifier.fillMaxSize()
+        )
+    } else {
+        var currentTab by remember { mutableStateOf(AppTab.HOME) }
+        var showAddDialog by remember { mutableStateOf(false) }
+
+        // Synchronize current tab state with Datadog RUM Views
+        DisposableEffect(currentTab) {
+            val screenName = currentTab.name
+            try {
+                if (com.datadog.android.Datadog.isInitialized() && com.datadog.android.rum.GlobalRumMonitor.isRegistered()) {
+                    com.datadog.android.rum.GlobalRumMonitor.get().startView(
+                        key = screenName,
+                        name = "$screenName Screen",
+                        attributes = emptyMap()
+                    )
+                    android.util.Log.d("DatadogMonitor", "Started Datadog RUM View: $screenName")
+                }
+            } catch (e: Throwable) {
+                android.util.Log.e("MainActivity", "Failed to start Datadog RUM view", e)
+            }
+            onDispose {
+                try {
+                    if (com.datadog.android.Datadog.isInitialized() && com.datadog.android.rum.GlobalRumMonitor.isRegistered()) {
+                        com.datadog.android.rum.GlobalRumMonitor.get().stopView(
+                            key = screenName,
+                            attributes = emptyMap()
+                        )
+                        android.util.Log.d("DatadogMonitor", "Stopped Datadog RUM View: $screenName")
+                    }
+                } catch (e: Throwable) {
+                    android.util.Log.e("MainActivity", "Failed to stop Datadog RUM view", e)
+                }
             }
         }
 
-        // Add Transaction Trigger Dialog overlaid
-        if (showAddDialog) {
-            AddTransactionDialog(
-                viewModel = viewModel,
-                onDismiss = { showAddDialog = false },
-                onConfirm = { showAddDialog = false }
-            )
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = DarkBG,
+            bottomBar = {
+                CustomBottomBar(
+                    selectedTab = currentTab,
+                    onTabSelected = { currentTab = it },
+                    onAddClicked = { showAddDialog = true }
+                )
+            }
+        ) { innerPadding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = innerPadding.calculateBottomPadding()) // Account for bottom bar
+            ) {
+                // Animated transitions between screen tabs
+                when (currentTab) {
+                    AppTab.HOME -> HomeScreen(
+                        viewModel = viewModel,
+                        onNavigateToReports = { currentTab = AppTab.TRENDS },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                    AppTab.TRENDS -> TrendsScreen(
+                        viewModel = viewModel,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                    AppTab.BUDGET -> BudgetScreen(
+                        viewModel = viewModel,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                    AppTab.SETTINGS -> SettingsScreen(
+                        viewModel = viewModel,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            }
+
+            // Add Transaction Trigger Dialog overlaid
+            if (showAddDialog) {
+                AddTransactionDialog(
+                    viewModel = viewModel,
+                    onDismiss = { showAddDialog = false },
+                    onConfirm = { showAddDialog = false }
+                )
+            }
         }
     }
 }

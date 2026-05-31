@@ -39,6 +39,8 @@ fun SettingsScreen(
     val userName by viewModel.userName.collectAsState()
     val currencySymbol by viewModel.currencySymbol.collectAsState()
     val themeSetting by viewModel.themeSetting.collectAsState()
+    val currentUserEmail by viewModel.currentUserEmail.collectAsState()
+    val currentUserDisplayName by viewModel.currentUserDisplayName.collectAsState()
 
     var editingName by remember { mutableStateOf(false) }
     var nameInput by remember { mutableStateOf("") }
@@ -148,8 +150,8 @@ fun SettingsScreen(
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = "Active Budget Controller",
-                                    color = TextMuted,
+                                    text = currentUserEmail?.let { "$it (Synced)" } ?: "Offline Mode",
+                                    color = if (currentUserEmail != null) AccentPurple else TextMuted,
                                     fontSize = 12.sp
                                 )
                             }
@@ -207,6 +209,50 @@ fun SettingsScreen(
                                 Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text("Edit Custom Username", fontSize = 13.sp)
+                            }
+                        }
+
+                        // Sync statistics details
+                        if (currentUserEmail != null) {
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(DarkCategory, RoundedCornerShape(12.dp))
+                                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CloudSync,
+                                        contentDescription = null,
+                                        tint = AccentPurple,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Firebase Project: my-budget-app",
+                                        color = TextLight,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+
+                                OutlinedButton(
+                                    onClick = {
+                                        viewModel.logOut()
+                                    },
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFF2B8B5)),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF2B8B5).copy(alpha = 0.5f)),
+                                    modifier = Modifier.fillMaxWidth().testTag("google_sign_out_btn")
+                                ) {
+                                    Icon(Icons.Default.Logout, contentDescription = "Sign Out", modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Sign Out of Google Account", fontSize = 13.sp)
+                                }
                             }
                         }
                     }

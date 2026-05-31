@@ -30,6 +30,53 @@ class BudgetViewModel(application: Application) : AndroidViewModel(application) 
     private val _themeSetting = MutableStateFlow(sharedPrefs.getString("theme_setting", "SYSTEM") ?: "SYSTEM")
     val themeSetting: StateFlow<String> = _themeSetting.asStateFlow()
 
+    // Auth state persistence
+    private val _currentUserEmail = MutableStateFlow(sharedPrefs.getString("current_user_email", null))
+    val currentUserEmail: StateFlow<String?> = _currentUserEmail.asStateFlow()
+
+    private val _currentUserDisplayName = MutableStateFlow(sharedPrefs.getString("current_user_display_name", null))
+    val currentUserDisplayName: StateFlow<String?> = _currentUserDisplayName.asStateFlow()
+
+    val isUserLoggedIn: StateFlow<Boolean> = _currentUserEmail
+        .map { it != null }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, sharedPrefs.getString("current_user_email", null) != null)
+
+    fun logIn(email: String, displayName: String) {
+        val cleanEmail = email.trim()
+        val cleanName = displayName.trim()
+        _currentUserEmail.value = cleanEmail
+        _currentUserDisplayName.value = cleanName
+        
+        sharedPrefs.edit()
+            .putString("current_user_email", cleanEmail)
+            .putString("current_user_display_name", cleanName)
+            .apply()
+
+        // Sync name setting with profile name representation
+        updateUserName(cleanName)
+
+        // Force a one-time pulldown of database tables from Firestore to local Room Cache
+        viewModelScope.launch {
+            try {
+                com.example.data.FirebaseSyncManager.syncFirestoreToLocal(
+                    userId = cleanEmail.replace(".", "_"),
+                    repository = repository
+                )
+            } catch (e: Exception) {
+                android.util.Log.e("BudgetViewModel", "Error fetching from Firestore on login", e)
+            }
+        }
+    }
+
+    fun logOut() {
+        _currentUserEmail.value = null
+        _currentUserDisplayName.value = null
+        sharedPrefs.edit()
+            .remove("current_user_email")
+            .remove("current_user_display_name")
+            .apply()
+    }
+
     fun updateUserName(name: String) {
         val updated = name.ifBlank { "User" }
         _userName.value = updated
@@ -82,6 +129,13 @@ class BudgetViewModel(application: Application) : AndroidViewModel(application) 
     val selectedMonth: StateFlow<String> = _selectedMonth.asStateFlow()
 
     init {
+        // Initialize Firebase programmatic SDK configuration
+        try {
+            com.example.data.FirebaseSyncManager.initialize(application)
+        } catch (e: Exception) {
+            android.util.Log.e("BudgetViewModel", "Failed to initialize Firebase in ViewModel init", e)
+        }
+
         val database = AppDatabase.getDatabase(application)
         repository = BudgetRepository(database.budgetDao())
 
@@ -99,6 +153,49 @@ class BudgetViewModel(application: Application) : AndroidViewModel(application) 
             repository.allTransactions.first().let { list ->
                 if (list.isEmpty()) {
                     seedDefaultData(initialMonth)
+                }
+            }
+        }
+
+        // Continuous, automatic Firestore Sync triggers on local changes
+        viewModelScope.launch {
+            allTransactions.collect { transactions ->
+                val email = currentUserEmail.value
+                if (email != null && transactions.isNotEmpty()) {
+                    com.example.data.FirebaseSyncManager.syncLocalToFirestore(
+                        userId = email.replace(".", "_"),
+                        transactions = transactions,
+                        budgets = allBudgets.value,
+                        categories = allCategories.value
+                    )
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            allBudgets.collect { budgets ->
+                val email = currentUserEmail.value
+                if (email != null && budgets.isNotEmpty()) {
+                    com.example.data.FirebaseSyncManager.syncLocalToFirestore(
+                        userId = email.replace(".", "_"),
+                        transactions = allTransactions.value,
+                        budgets = budgets,
+                        categories = allCategories.value
+                    )
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            allCategories.collect { categories ->
+                val email = currentUserEmail.value
+                if (email != null && categories.isNotEmpty()) {
+                    com.example.data.FirebaseSyncManager.syncLocalToFirestore(
+                        userId = email.replace(".", "_"),
+                        transactions = allTransactions.value,
+                        budgets = allBudgets.value,
+                        categories = categories
+                    )
                 }
             }
         }
